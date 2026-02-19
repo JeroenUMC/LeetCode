@@ -2,7 +2,7 @@
 # Pre-commit hook: Run all tests before commit
 
 echo "Running unit tests before commit..."
-./.venv/Scripts/pytest tests/ --tb=short
+python -m pytest tests/ --tb=short
 
 if [ $? -ne 0 ]; then
     echo ""

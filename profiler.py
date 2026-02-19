@@ -9,6 +9,9 @@ import argparse
 import time
 import psutil
 import os
+import cProfile
+import pstats
+import io
 from pathlib import Path
 from typing import Dict, List, Any
 
@@ -83,7 +86,7 @@ class SolutionProfiler:
             return method(**test_input)
         return method(test_input)
 
-    def profile_solution(self, test_input: Any, line_profile: bool = False):
+    def profile_solution(self, test_input: Any, line_profile: bool = False, function_profile: bool = False):
         """Profile a solution with given test input."""
         instance = self.solution_class()
         main_method = self._get_main_method()
@@ -102,7 +105,15 @@ class SolutionProfiler:
         start_time = time.perf_counter()
         try:
             line_stats = None
-            if line_profile and LineProfiler is not None:
+            func_stats = None
+            
+            if function_profile:
+                profiler = cProfile.Profile()
+                profiler.enable()
+                result = self._invoke_method(method, test_input)
+                profiler.disable()
+                func_stats = profiler
+            elif line_profile and LineProfiler is not None:
                 line_profiler = LineProfiler()
                 line_profiler.add_function(method)
                 line_profiler.enable_by_count()
@@ -122,6 +133,7 @@ class SolutionProfiler:
                 'memory_used_mb': mem_after - mem_before,
                 'result': result,
                 'line_stats': line_stats,
+                'func_stats': func_stats,
                 'success': True
             }
         except Exception as e:
@@ -198,6 +210,11 @@ def main():
         help='Enable line-by-line profiling (requires line_profiler)'
     )
     parser.add_argument(
+        '--function-profile',
+        action='store_true',
+        help='Enable function-level profiling to see time spent in each function'
+    )
+    parser.add_argument(
         '--dir',
         type=str,
         default='.',
@@ -250,7 +267,7 @@ def main():
         profiler = SolutionProfiler(solution_class, notebook_path.name)
         if args.line_profile and LineProfiler is None:
             print("  ⚠ line_profiler not installed; run `pip install line_profiler`")
-        result = profiler.profile_solution(test_input, line_profile=args.line_profile)
+        result = profiler.profile_solution(test_input, line_profile=args.line_profile, function_profile=args.function_profile)
         
         if result and result.get('success'):
             print(f"  Method: {result['method']}")
@@ -262,6 +279,19 @@ def main():
                 print(f"  Memory After: {result['memory_after_mb']:.2f} MB")
                 print(f"  Memory Used: {result['memory_used_mb']:.2f} MB")
 
+            if args.function_profile and result.get('func_stats') is not None:
+                print("\n  Function-level profile (sorted by cumulative time):")
+                print("  " + "-"*66)
+                s = io.StringIO()
+                ps = pstats.Stats(result['func_stats'], stream=s)
+                ps.sort_stats('cumulative')
+                ps.print_stats(20)  # Print top 20 functions
+                
+                # Indent the output for better formatting
+                for line in s.getvalue().split('\n'):
+                    if line.strip():
+                        print("  " + line)
+                
             if args.line_profile and result.get('line_stats') is not None:
                 print("\n  Line-by-line profile:")
                 result['line_stats'].print_stats()

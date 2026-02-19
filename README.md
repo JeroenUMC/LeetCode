@@ -79,6 +79,20 @@ python profiler.py
 python profiler.py --notebook "42. Trapping Rain Water.ipynb"
 ```
 
+### Profile with custom input
+```bash
+python profiler.py --notebook "42. Trapping Rain Water.ipynb" --input "[100000,0,99999,0]"
+```
+
+```bash
+python profiler.py --notebook "42. Trapping Rain Water.ipynb" --input-file input.json
+```
+
+### Line-by-line profiling
+```bash
+python profiler.py --notebook "42. Trapping Rain Water.ipynb" --input "[100000,0,99999,0]" --line-profile
+```
+
 ### Profile with memory tracking
 ```bash
 python profiler.py --memory

@@ -10,8 +10,12 @@ import time
 import psutil
 import os
 from pathlib import Path
-from memory_profiler import profile
 from typing import Dict, List, Any
+
+try:
+    from line_profiler import LineProfiler
+except ImportError:  # Optional dependency for line-by-line profiling
+    LineProfiler = None
 
 
 class NotebookSolutionExtractor:
@@ -38,7 +42,7 @@ class NotebookSolutionExtractor:
             if solutions:
                 self.solution_code = '\n'.join(solutions)
         except Exception as e:
-            print(f"Error reading notebook {notebook_path}: {e}")
+            print(f"Error reading notebook {self.notebook_path}: {e}")
 
     def get_solution_class(self):
         """Execute and return Solution class."""
@@ -74,7 +78,12 @@ class SolutionProfiler:
                   if not m.startswith('_') and callable(getattr(self.solution_class, m))]
         return methods[0] if methods else None
 
-    def profile_solution(self, test_input: Any):
+    def _invoke_method(self, method, test_input: Any):
+        if isinstance(test_input, dict):
+            return method(**test_input)
+        return method(test_input)
+
+    def profile_solution(self, test_input: Any, line_profile: bool = False):
         """Profile a solution with given test input."""
         instance = self.solution_class()
         main_method = self._get_main_method()
@@ -92,7 +101,16 @@ class SolutionProfiler:
         # Time the execution
         start_time = time.perf_counter()
         try:
-            result = method(test_input)
+            line_stats = None
+            if line_profile and LineProfiler is not None:
+                line_profiler = LineProfiler()
+                line_profiler.add_function(method)
+                line_profiler.enable_by_count()
+                result = self._invoke_method(method, test_input)
+                line_profiler.disable_by_count()
+                line_stats = line_profiler
+            else:
+                result = self._invoke_method(method, test_input)
             end_time = time.perf_counter()
             mem_after = process.memory_info().rss / 1024 / 1024  # MB
             
@@ -103,6 +121,7 @@ class SolutionProfiler:
                 'memory_after_mb': mem_after,
                 'memory_used_mb': mem_after - mem_before,
                 'result': result,
+                'line_stats': line_stats,
                 'success': True
             }
         except Exception as e:
@@ -133,6 +152,22 @@ def get_test_input_for_notebook(notebook_name: str) -> Any:
     return test_cases.get(name, None)
 
 
+def load_input_from_file(file_path: str) -> Any:
+    """Load JSON input from file."""
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def parse_input_arg(input_arg: str) -> Any:
+    """Parse JSON input from CLI argument."""
+    if input_arg is None:
+        return None
+    try:
+        return json.loads(input_arg)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON for --input: {e}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Profile LeetCode solution classes'
@@ -146,6 +181,21 @@ def main():
         '--memory',
         action='store_true',
         help='Show detailed memory statistics'
+    )
+    parser.add_argument(
+        '--input',
+        type=str,
+        help='JSON input to pass to the Solution method'
+    )
+    parser.add_argument(
+        '--input-file',
+        type=str,
+        help='Path to a JSON file containing input data'
+    )
+    parser.add_argument(
+        '--line-profile',
+        action='store_true',
+        help='Enable line-by-line profiling (requires line_profiler)'
     )
     parser.add_argument(
         '--dir',
@@ -185,7 +235,12 @@ def main():
             continue
         
         # Get test input
-        test_input = get_test_input_for_notebook(str(notebook_path.name))
+        if args.input_file:
+            test_input = load_input_from_file(args.input_file)
+        else:
+            test_input = parse_input_arg(args.input)
+        if test_input is None:
+            test_input = get_test_input_for_notebook(str(notebook_path.name))
         
         if test_input is None:
             print(f"  ⚠ No test case available for this notebook\n")
@@ -193,7 +248,9 @@ def main():
         
         # Profile the solution
         profiler = SolutionProfiler(solution_class, notebook_path.name)
-        result = profiler.profile_solution(test_input)
+        if args.line_profile and LineProfiler is None:
+            print("  ⚠ line_profiler not installed; run `pip install line_profiler`")
+        result = profiler.profile_solution(test_input, line_profile=args.line_profile)
         
         if result and result.get('success'):
             print(f"  Method: {result['method']}")
@@ -204,6 +261,10 @@ def main():
                 print(f"  Memory Before: {result['memory_before_mb']:.2f} MB")
                 print(f"  Memory After: {result['memory_after_mb']:.2f} MB")
                 print(f"  Memory Used: {result['memory_used_mb']:.2f} MB")
+
+            if args.line_profile and result.get('line_stats') is not None:
+                print("\n  Line-by-line profile:")
+                result['line_stats'].print_stats()
             
             total_results.append(result)
         else:

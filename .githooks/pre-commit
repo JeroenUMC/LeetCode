@@ -1,0 +1,16 @@
+#!/bin/bash
+# Pre-commit hook: Run all tests before commit
+
+echo "Running unit tests before commit..."
+./.venv/Scripts/pytest tests/ --tb=short
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Tests failed! Commit aborted."
+    echo "Fix the failing tests and try again."
+    exit 1
+fi
+
+echo ""
+echo "✅ All tests passed!"
+exit 0

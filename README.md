@@ -113,37 +113,83 @@ git config core.hooksPath .githooks
 
 Now when you try to commit, tests will run automatically. If tests fail, the commit is blocked.
 
-## Creating Tests for New Problems
+For more details on the automated testing system, see [TESTING_AUTOMATION.md](TESTING_AUTOMATION.md).
 
-1. Create a Jupyter notebook: `<problem_number>. <problem_name>.ipynb`
-   - Add a `Solution` class with the main method
+## Adding New LeetCode Problems
 
-2. Create a test file: `tests/test_<problem_number>_<problem_name>.py`
-   ```python
-   import pytest
-   from .conftest import NotebookSolutionLoader
-   
-   class TestMyProblem:
-       @pytest.fixture(scope="class")
-       def solution_class(self):
-           notebook_path = NotebookSolutionLoader.find_notebook("<notebook_name>.ipynb")
-           solution = NotebookSolutionLoader.load_solution_from_notebook(notebook_path)
-           assert solution is not None
-           return solution
-       
-       @pytest.fixture
-       def solution(self, solution_class):
-           return solution_class()
-       
-       def test_example(self, solution):
-           # Your test here
-           assert solution.main_method(input) == expected
-   ```
+**IMPORTANT:** Follow the naming convention exactly for automated test selection to work.
 
-3. Run tests:
-   ```bash
-   pytest tests/test_<problem_number>_<problem_name>.py -v
-   ```
+### 1. Create the Notebook
+
+Create a Jupyter notebook with this exact naming pattern:
+```
+<number>. <problem_name>.ipynb
+```
+
+Examples:
+- `42. Trapping Rain Water.ipynb`
+- `1. Two Sum.ipynb`
+- `15. 3Sum.ipynb`
+
+The notebook must contain a `Solution` class with your implementation.
+
+### 2. Create the Test File
+
+Create a corresponding test file following this pattern:
+```
+tests/test_<number>_<snake_case_name>.py
+```
+
+Examples:
+- `42. Trapping Rain Water.ipynb` → `tests/test_42_trapping_rain_water.py`
+- `1. Two Sum.ipynb` → `tests/test_1_two_sum.py`
+- `15. 3Sum.ipynb` → `tests/test_15_3sum.py`
+
+**Naming rules:**
+- Remove special characters (except spaces)
+- Convert spaces to underscores
+- Convert to lowercase
+
+**Template:**
+```python
+import pytest
+from .conftest import NotebookSolutionLoader
+
+class TestProblemName:
+    @pytest.fixture(scope="class")
+    def solution_class(self):
+        notebook_path = NotebookSolutionLoader.find_notebook("<number>. <problem_name>.ipynb")
+        solution = NotebookSolutionLoader.load_solution_from_notebook(notebook_path)
+        assert solution is not None, "Failed to load Solution class from notebook"
+        return solution
+    
+    @pytest.fixture
+    def solution(self, solution_class):
+        return solution_class()
+    
+    def test_example(self, solution):
+        # Your test here
+        assert solution.method_name(input) == expected
+```
+
+### 3. Run Tests
+
+```bash
+# Run specific test file
+pytest tests/test_<number>_<problem_name>.py -v
+
+# Or use the automated test runner
+python run_tests_auto.py --files "<number>. <problem_name>.ipynb"
+```
+
+### Why the Naming Convention Matters
+
+The automated test runner uses the naming convention to map notebooks to tests:
+- When GitHub Copilot edits `42. Trapping Rain Water.ipynb`
+- It automatically runs only `tests/test_42_trapping_rain_water.py`
+- This keeps feedback fast as your problem collection grows
+
+See [TESTING_AUTOMATION.md](TESTING_AUTOMATION.md) for details on smart test selection.
 
 ## Dependencies
 

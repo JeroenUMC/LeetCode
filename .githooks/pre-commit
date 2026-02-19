@@ -1,16 +1,20 @@
 #!/bin/bash
-# Pre-commit hook: Run all tests before commit
+# Pre-commit hook: Run all tests before commit with logging
 
 echo "Running unit tests before commit..."
-python -m pytest tests/ --tb=short
+python run_tests_auto.py
 
-if [ $? -ne 0 ]; then
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
     echo ""
     echo "❌ Tests failed! Commit aborted."
     echo "Fix the failing tests and try again."
+    echo "Results have been logged to test_log.txt"
     exit 1
 fi
 
 echo ""
 echo "✅ All tests passed!"
+echo "Results have been logged to test_log.txt"
 exit 0

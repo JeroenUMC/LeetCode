@@ -12,6 +12,7 @@ import os
 import cProfile
 import pstats
 import io
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any
 
@@ -181,6 +182,25 @@ def parse_input_arg(input_arg: str) -> Any:
 
 
 def main():
+    log_lines: List[str] = []
+
+    def log(line: str = "") -> None:
+        print(line)
+        log_lines.append(line)
+
+    def log_only(line: str = "") -> None:
+        log_lines.append(line)
+
+    def append_profiler_log() -> None:
+        log_path = Path('profiler_log.txt')
+        try:
+            with open(log_path, 'a', encoding='utf-8') as f:
+                for line in log_lines:
+                    f.write(f"{line}\n")
+                f.write("\n")
+        except Exception as e:
+            print(f"Failed to write profiler log: {e}")
+
     parser = argparse.ArgumentParser(
         description='Profile LeetCode solution classes'
     )
@@ -222,6 +242,29 @@ def main():
     )
     
     args = parser.parse_args()
+
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    separator = '=' * 80
+    log_only(separator)
+    log_only(f"Profiler Run: {timestamp}")
+    log_only(f"Notebook: {args.notebook if args.notebook else args.dir}")
+    mode_parts = []
+    if args.function_profile:
+        mode_parts.append('function')
+    if args.line_profile:
+        mode_parts.append('line')
+    if args.memory:
+        mode_parts.append('memory')
+    mode = 'basic' if not mode_parts else ','.join(mode_parts)
+    log_only(f"Mode: {mode}")
+    if args.input_file:
+        log_only(f"Input File: {args.input_file}")
+    elif args.input:
+        log_only(f"Input: {args.input}")
+    else:
+        log_only("Input: default")
+    log_only(separator)
+    log_only("STDOUT:")
     
     # Find notebooks
     if args.notebook:
@@ -230,25 +273,26 @@ def main():
         notebooks = find_notebooks(args.dir)
     
     if not notebooks:
-        print("No notebooks found.")
+        log("No notebooks found.")
+        append_profiler_log()
         return
     
-    print(f"\n{'='*70}")
-    print(f"LeetCode Solution Performance Profiler")
-    print(f"{'='*70}\n")
+    log(f"\n{'='*70}")
+    log("LeetCode Solution Performance Profiler")
+    log(f"{'='*70}\n")
     
     total_results = []
     
     for notebook_path in notebooks:
-        print(f"Processing: {notebook_path.name}")
-        print(f"{'-'*70}")
+        log(f"Processing: {notebook_path.name}")
+        log(f"{'-'*70}")
         
         # Extract and load solution
         extractor = NotebookSolutionExtractor(str(notebook_path))
         solution_class = extractor.get_solution_class()
         
         if not solution_class:
-            print(f"  ⚠ No Solution class found\n")
+            log("  ⚠ No Solution class found\n")
             continue
         
         # Get test input
@@ -260,28 +304,28 @@ def main():
             test_input = get_test_input_for_notebook(str(notebook_path.name))
         
         if test_input is None:
-            print(f"  ⚠ No test case available for this notebook\n")
+            log("  ⚠ No test case available for this notebook\n")
             continue
         
         # Profile the solution
         profiler = SolutionProfiler(solution_class, notebook_path.name)
         if args.line_profile and LineProfiler is None:
-            print("  ⚠ line_profiler not installed; run `pip install line_profiler`")
+            log("  ⚠ line_profiler not installed; run `pip install line_profiler`")
         result = profiler.profile_solution(test_input, line_profile=args.line_profile, function_profile=args.function_profile)
         
         if result and result.get('success'):
-            print(f"  Method: {result['method']}")
-            print(f"  Execution Time: {result['execution_time_ms']:.4f} ms")
-            print(f"  Result: {result['result']}")
+            log(f"  Method: {result['method']}")
+            log(f"  Execution Time: {result['execution_time_ms']:.4f} ms")
+            log(f"  Result: {result['result']}")
             
             if args.memory:
-                print(f"  Memory Before: {result['memory_before_mb']:.2f} MB")
-                print(f"  Memory After: {result['memory_after_mb']:.2f} MB")
-                print(f"  Memory Used: {result['memory_used_mb']:.2f} MB")
+                log(f"  Memory Before: {result['memory_before_mb']:.2f} MB")
+                log(f"  Memory After: {result['memory_after_mb']:.2f} MB")
+                log(f"  Memory Used: {result['memory_used_mb']:.2f} MB")
 
             if args.function_profile and result.get('func_stats') is not None:
-                print("\n  Function-level profile (sorted by cumulative time):")
-                print("  " + "-"*66)
+                log("\n  Function-level profile (sorted by cumulative time):")
+                log("  " + "-"*66)
                 s = io.StringIO()
                 ps = pstats.Stats(result['func_stats'], stream=s)
                 ps.sort_stats('cumulative')
@@ -290,33 +334,38 @@ def main():
                 # Indent the output for better formatting
                 for line in s.getvalue().split('\n'):
                     if line.strip():
-                        print("  " + line)
+                        log("  " + line)
                 
             if args.line_profile and result.get('line_stats') is not None:
-                print("\n  Line-by-line profile:")
+                log("\n  Line-by-line profile:")
                 result['line_stats'].print_stats()
             
             total_results.append(result)
         else:
             if result:
-                print(f"  ❌ Error: {result.get('error', 'Unknown error')}")
+                log(f"  ❌ Error: {result.get('error', 'Unknown error')}")
             else:
-                print(f"  ❌ Failed to profile")
+                log("  ❌ Failed to profile")
         
-        print()
+        log()
     
     # Summary
     if total_results:
-        print(f"{'='*70}")
-        print(f"Summary ({len(total_results)} solutions profiled)")
-        print(f"{'='*70}")
+        log(f"{'='*70}")
+        log(f"Summary ({len(total_results)} solutions profiled)")
+        log(f"{'='*70}")
         
         avg_time = sum(r['execution_time_ms'] for r in total_results) / len(total_results)
-        print(f"Average Execution Time: {avg_time:.4f} ms")
+        log(f"Average Execution Time: {avg_time:.4f} ms")
         
         if args.memory:
             avg_memory = sum(r['memory_used_mb'] for r in total_results) / len(total_results)
-            print(f"Average Memory Used: {avg_memory:.2f} MB")
+            log(f"Average Memory Used: {avg_memory:.2f} MB")
+
+    log_only("STDERR:")
+    log_only("")
+    log_only(separator)
+    append_profiler_log()
 
 
 if __name__ == '__main__':

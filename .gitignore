@@ -50,6 +50,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 test_log.txt
+profiler_log.txt
 TEST_FAILURES.md
 cover/
 

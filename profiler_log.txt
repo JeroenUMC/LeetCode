@@ -1,0 +1,51 @@
+================================================================================
+Profiler Run: 2026-02-20 08:24:05
+Notebook: 42. Trapping Rain Water.ipynb
+Mode: function
+Input File: input.json
+================================================================================
+STDOUT:
+======================================================================
+LeetCode Solution Performance Profiler
+======================================================================
+
+Processing: 42. Trapping Rain Water.ipynb
+----------------------------------------------------------------------
+  Method: trap
+  Execution Time: 7299.9755 ms
+  Result: 949905000
+
+  Function-level profile (sorted by cumulative time):
+  ------------------------------------------------------------------
+           329992 function calls in 7.300 seconds
+     Ordered by: cumulative time
+     List reduced from 33 to 20 due to restriction <20>
+     ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+          1    0.000    0.000    7.300    7.300 /workspaces/LeetCode/profiler.py:84(_invoke_method)
+          1    0.000    0.000    7.300    7.300 <string>:222(trap)
+          1    0.049    0.049    7.250    7.250 <string>:161(create_pools)
+      10000    0.013    0.000    4.583    0.000 <string>:128(find_right_wall)
+      10001    0.027    0.000    4.571    0.000 <string>:131(find_wall)
+       9999    4.541    0.000    4.541    0.000 <string>:152(find_wall_iteratively)
+      10000    1.303    0.000    1.303    0.000 <string>:119(get_pool_as_right_wall)
+      10000    1.221    0.000    1.221    0.000 <string>:113(get_pool_as_left_wall)
+       9999    0.016    0.000    0.031    0.000 <string>:27(update_sorted_heights)
+       9999    0.029    0.000    0.030    0.000 <string>:70(create_pool)
+          1    0.006    0.006    0.029    0.029 <string>:211(update_relative_depth_and_nr_of_filled_blocks)
+      19999    0.015    0.000    0.029    0.000 <string>:52(_is_removed_index)
+      29996    0.024    0.000    0.024    0.000 {built-in method _bisect.bisect_left}
+       9999    0.013    0.000    0.022    0.000 <string>:195(find_relative_depth_and_nr_of_filled_blocks)
+          1    0.000    0.000    0.016    0.016 <string>:64(set)
+      89995    0.010    0.000    0.010    0.000 {built-in method builtins.len}
+          1    0.000    0.000    0.009    0.009 <string>:10(set_blocks)
+          1    0.009    0.009    0.009    0.009 <string>:11(<listcomp>)
+          1    0.000    0.000    0.007    0.007 <string>:21(set_sorted_heights)
+          1    0.005    0.005    0.007    0.007 {built-in method builtins.sorted}
+
+======================================================================
+Summary (1 solutions profiled)
+======================================================================
+Average Execution Time: 7299.9755 ms
+STDERR:
+
+================================================================================

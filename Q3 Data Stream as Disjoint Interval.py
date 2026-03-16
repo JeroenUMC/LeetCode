@@ -34,27 +34,21 @@ def _(Any, List):
                     return inter 
             return None
 
-        def update_intervals(self,value:int):
-            neighs = neighbours(value)
-            neigh_0 = neighs[0]
-            neigh_1 = neighs[1]
+        def update_intervals(self, value: int):
+            left_value, right_value = neighbours(value)
 
-            left_interval = self.get_interval(neigh_0, from_left = False)
-            right_interval = self.get_interval(neigh_1, from_left = True)
-        
-            if left_interval != None and right_interval != None:
-                new_interval = interval(left_interval[0],right_interval[1])
+            left_interval = self.get_interval(left_value, from_left=False)
+            right_interval = self.get_interval(right_value, from_left=True)
+
+            start = left_interval[0] if left_interval is not None else value
+            end = right_interval[1] if right_interval is not None else value
+
+            if left_interval is not None:
                 self.intervals.remove(left_interval)
+            if right_interval is not None:
                 self.intervals.remove(right_interval)
-            elif left_interval != None:
-                new_interval = interval(left_interval[0],value)
-                self.intervals.remove(left_interval)
-            elif right_interval != None:
-                new_interval = interval(value,right_interval[1])
-                self.intervals.remove(right_interval)
-            else:
-                new_interval = interval(value,value)
-            self.intervals.append(new_interval)
+
+            self.intervals.append(interval(start, end))
     
         def addNum(self, value: int) -> None:
             if value in self.arr:
